@@ -1,32 +1,32 @@
 <?php
 
-define("INSERT_QUERY", 1);
-define("UPDATE_QUERY", 2);
-define("DELETE_QUERY", 3);
-define("SELECT_QUERY", 4);
-define("INI_FILE", "config.ini");
-
 class DB
 {	
 
 	private $con;
 
+	const INSERT_QUERY = 1;
+	const UPDATE_QUERY = 2;
+	const DELETE_QUERY = 3;
+	const SELECT_QUERY = 4;
+	const INI_FILE = "config.ini";
+
 	function __construct() {
-		if (!$config = parse_ini_file(INI_FILE, TRUE)) throw new exception('Unable to open ini file!');
+		if (!$config = parse_ini_file(self::INI_FILE, TRUE)) throw new exception('Unable to open ini file!');
 		extract($config['database']);
 		$port = isset($port) ? ";port=$port" : "";
 		$dns = "{$driver}:host={$host}{$port};dbname=$schema";
 		$this->con = new PDO($dns, $username, $password);        
 	}
 
-	public function execute ($query_type, $object, $conditions = array()) {
+	protected function execute ($query_type, $object, $conditions = array()) {
 		$tableName = is_object($object) ? get_class($object) : $object; 
 		switch ($query_type) {
-			case INSERT_QUERY:
+			case self::INSERT_QUERY:
 				return $this->executeInsertQuery (
 					$this->makeQuery($query_type, $tableName, (array)$object, $conditions)
 				);
-			case SELECT_QUERY:	
+			case self::SELECT_QUERY:	
 				$stmt = $this->con->prepare(
 					$this->makeQuery($query_type, $tableName, array(), $conditions)
 				);
@@ -50,19 +50,19 @@ class DB
 
 	public function makeQuery (int $query_type, string $tableName, array $data, array $conditions = array()) {
 		switch ($query_type) {
-			case INSERT_QUERY:
+			case self::INSERT_QUERY:
 				$sQuery = "INSERT INTO $tableName ";
 				$sQuery .= $this->makeSet($data);
 				break;
-			case UPDATE_QUERY:
+			case self::UPDATE_QUERY:
 				$sQuery = "UPDATE $tableName ";
 				$sQuery .= $this->makeSet($data);
 				$sQuery .= "WHERE id = {$data['id']}";
 				break;
-			case DELETE_QUERY:
+			case self::DELETE_QUERY:
 				$sQuery = "DELETE FROM $tableName WHERE id = {$data['id']}";
 				break;
-			case SELECT_QUERY:
+			case self::SELECT_QUERY:
 				$sQuery = "SELECT * FROM $tableName ";
 				$sQuery .= $this->makeWhere($conditions);
 				break;
@@ -70,7 +70,7 @@ class DB
 		return $sQuery;
 	}
 
-	public function makeSet (array $data) {
+	private function makeSet (array $data) {
 		if(!is_array($data)) throw new Exception("Parameter must be array", 500);
 		if(!empty($data)) {
 			$sSet = " SET ";
@@ -83,14 +83,18 @@ class DB
 		return "";
 	}
 
-	public function makeWhere (array $conditions, string $comparator = "AND") {
+	private function makeWhere (array $conditions, string $comparator = "AND") {
 		if(!is_array($conditions)) throw new Exception("Parameter must be array", 500);
 		if(!empty($conditions)) {
 			$sWhere = " WHERE ";
 			foreach ($conditions as $field => $value) 
-				$aWhere[] = " $field = '$value' ";
+				if(is_numeric($value))
+					$aWhere[] = " $field = '$value' ";
+				else
+					$aWhere[] = " $field LIKE '%{$value}%' ";
 			return $sWhere . implode($comparator, $aWhere);
 		}
 		return "";
 	}
+
 }
