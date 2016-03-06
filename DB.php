@@ -10,6 +10,7 @@ class DB
 	const DELETE_QUERY = 3;
 	const SELECT_QUERY = 4;
 	const INI_FILE = "config.ini";
+	const EMPTY_STRING = "";
 
 	function __construct() {
 		if (!$config = parse_ini_file(self::INI_FILE, TRUE)) throw new exception('Unable to open ini file!');
@@ -48,7 +49,7 @@ class DB
 		return $this->con->lastInsertId();
 	}
 
-	public function makeQuery (int $query_type, string $tableName, array $data, array $conditions = array()) {
+	private function makeQuery (int $query_type, string $tableName, array $data, array $conditions = array()) {
 		switch ($query_type) {
 			case self::INSERT_QUERY:
 				$sQuery = "INSERT INTO $tableName ";
@@ -80,7 +81,7 @@ class DB
 			}
 			return $sSet . implode(",", $aSet);
 		}
-		return "";
+		return self::EMPTY_STRING;
 	}
 
 	private function makeWhere (array $conditions, string $comparator = "AND") {
@@ -94,7 +95,7 @@ class DB
 					$aWhere[] = " $field LIKE '%{$value}%' ";
 			return $sWhere . implode($comparator, $aWhere);
 		}
-		return "";
+		return self::EMPTY_STRING;
 	}
 
 }
